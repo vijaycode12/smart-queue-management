@@ -40,8 +40,8 @@ export const completeToken = (id, role) =>
 export const markNoShow = (id, role) =>
   api.put(`/token/no-show/${id}`, {}, { headers: { role } });
 
-// export const updateQueueStatus = (id, status, role) =>
-//   api.put(`/queue/update-status/${id}`, {}, { headers: { role }, params: { status } });
+export const updateQueueStatus = (id, status, role) =>
+  api.put(`/queue/update-status/${id}`, {}, { headers: { role }});
 
-// export const deleteQueue = (id, role) =>
-//   api.delete(`/queue/delete/${id}`, { headers: { role } });
+export const deleteQueue = (id, role) =>
+  api.delete(`/queue/delete/${id}`, { headers: { role } });
