@@ -181,20 +181,20 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  // Hours left until 6PM
-  const hoursUntil6PM = () => {
+  // Hours left until 10PM
+  const hoursUntil10PM = () => {
     const now  = new Date();
-    const six  = new Date();
-    six.setHours(18, 0, 0, 0);
-    if (now >= six) return null; // already past
-    const diff = six - now;
+    const ten  = new Date();
+    ten.setHours(22, 0, 0, 0);
+    if (now >= ten) return null; // already past
+    const diff = ten - now;
     const h    = Math.floor(diff / 3600000);
     const m    = Math.floor((diff % 3600000) / 60000);
     return `${h}h ${m}m`;
   };
 
-  const timeLeft = hoursUntil6PM();
-  const isPast6PM = !timeLeft;
+  const timeLeft = hoursUntil10PM();
+  const isPast10PM = !timeLeft;
 
   const stats = [
     { label: "Total Queues", value: queues.length,                                          icon: "🏢", color: "#6366f1", bg: "#eef2ff" },
@@ -234,16 +234,16 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        {/* 6PM Warning */}
+        {/* 10PM Warning */}
         {timeLeft && (
           <div style={{ margin: "10px 14px 0", padding: "8px 12px", borderRadius: 10, background: "rgba(220,38,38,0.12)", border: "1px solid rgba(220,38,38,0.2)", textAlign: "center" }}>
             <div style={{ fontSize: 11, color: "#fca5a5", fontWeight: 700 }}>🕕 Auto-inactive in</div>
             <div style={{ fontSize: 15, color: "#f87171", fontWeight: 900 }}>{timeLeft}</div>
           </div>
         )}
-        {isPast6PM && (
+        {isPast10PM && (
           <div style={{ margin: "10px 14px 0", padding: "8px 12px", borderRadius: 10, background: "rgba(220,38,38,0.2)", border: "1px solid rgba(220,38,38,0.3)", textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: "#fca5a5", fontWeight: 700 }}>🚫 Past 6PM — queues auto-inactive</div>
+            <div style={{ fontSize: 12, color: "#fca5a5", fontWeight: 700 }}>🚫 Past 10PM — queues auto-inactive</div>
           </div>
         )}
 
@@ -297,7 +297,7 @@ export default function AdminDashboard({ user, onLogout }) {
             </h1>
             <p style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>
               {activeTab === "overview" ? "Real-time queue monitoring and control"
-               : activeTab === "queues"  ? "Create, pause, deactivate and delete queues — auto-inactive at 6:00 PM"
+               : activeTab === "queues"  ? "Create, pause, deactivate queues — auto-inactive at 10:00 PM"
                : "View and manage all token statuses"}
             </p>
           </div>
@@ -441,16 +441,16 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
 
               {/* 6PM Auto-inactive notice */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", background: isPast6PM ? "#fef2f2" : "#fffbeb", border: `1px solid ${isPast6PM ? "#fecaca" : "#fde68a"}`, borderRadius: 14, marginBottom: 20 }}>
-                <span style={{ fontSize: 20 }}>{isPast6PM ? "🚫" : "🕕"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", background: isPast10PM ? "#fef2f2" : "#fffbeb", border: `1px solid ${isPast10PM ? "#fecaca" : "#fde68a"}`, borderRadius: 14, marginBottom: 20 }}>
+                <span style={{ fontSize: 20 }}>{isPast10PM ? "🚫" : "🕕"}</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: isPast6PM ? "#dc2626" : "#d97706" }}>
-                    {isPast6PM
-                      ? "Past 6:00 PM — all queues were automatically set to INACTIVE"
-                      : `Auto-inactive scheduled at 6:00 PM — ${timeLeft} remaining`}
+                  <div style={{ fontSize: 13, fontWeight: 800, color: isPast10PM ? "#dc2626" : "#d97706" }}>
+                    {isPast10PM
+                      ? "Past 10:00 PM — all queues were automatically set to INACTIVE"
+                      : `Auto-inactive scheduled at 10:00 PM — ${timeLeft} remaining`}
                   </div>
                   <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                    Every day at 6:00 PM, all active and paused queues are automatically deactivated.
+                    Every day at 10:00 PM, all active and paused queues are automatically deactivated.
                   </div>
                 </div>
               </div>
