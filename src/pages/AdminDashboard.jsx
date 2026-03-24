@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import {
   getAllQueues, createQueue, getAllTokens, getTokensByQueue,
   callNextToken, completeToken, markNoShow,
-  updateQueueStatus, deleteQueue,
+  updateQueueStatus, 
+  // deleteQueue,
 } from "../services/api";
 
 export default function AdminDashboard({ user, onLogout }) {
@@ -96,18 +97,18 @@ export default function AdminDashboard({ user, onLogout }) {
     setQL(queue.id, null);
   };
 
-  const handleDeleteQueue = async () => {
-    if (!deleteConfirm) return;
-    try {
-      await deleteQueue(deleteConfirm.id, user?.role);
-      showToast(`Queue "${deleteConfirm.name}" deleted — IDs resequenced`);
-      setDeleteConfirm(null);
-      await fetchAll();
-    } catch (e) {
-      showToast(e.response?.data || "Failed to delete queue", "error");
-      setDeleteConfirm(null);
-    }
-  };
+  // const handleDeleteQueue = async () => {
+  //   if (!deleteConfirm) return;
+  //   try {
+  //     await deleteQueue(deleteConfirm.id, user?.role);
+  //     showToast(`Queue "${deleteConfirm.name}" deleted — IDs resequenced`);
+  //     setDeleteConfirm(null);
+  //     await fetchAll();
+  //   } catch (e) {
+  //     showToast(e.response?.data || "Failed to delete queue", "error");
+  //     setDeleteConfirm(null);
+  //   }
+  // };
 
   // ─── TOKEN ACTIONS ──────────────────────────
   const handleCallNext = async (queueId) => {
