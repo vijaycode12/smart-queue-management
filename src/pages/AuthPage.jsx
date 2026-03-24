@@ -114,38 +114,37 @@ export default function AuthPage({ onLogin }) {
           <div style={{ fontSize: 44, fontWeight: 900, color: "#ffd200", letterSpacing: "-2px", marginBottom: 14 }}>A042</div>
 
           {/* ── Open Offices row ── */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🏢</span>
-              <div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>OFFICES OPEN</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>
-                  {activeCount}
-                </div>
-              </div>
-            </div>
-            <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🖥️</span>
-              <div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>COUNTERS</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>A · B · C</div>
-              </div>
-            </div>
-            <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>✅</span>
-              <div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>STATUS</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981" }}>
-                  {activeCount > 0 ? "Active Offices" : "No Active Office"}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* ── Open Offices ONLY ── */}
+<div style={{
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  paddingTop: 14,
+  borderTop: "1px solid rgba(255,255,255,0.08)",
+}}>
+  <span style={{ fontSize: 18 }}>🏢</span>
+
+  <div>
+    <div style={{
+      fontSize: 11,
+      color: "rgba(255,255,255,0.3)",
+      letterSpacing: 1.5,
+      fontWeight: 700,
+      marginBottom: 2
+    }}>
+      OFFICES OPEN
+    </div>
+
+    <div style={{
+      fontSize: 26,
+      fontWeight: 900,
+      color: activeCount > 0 ? "#fff" : "#ef4444",
+      letterSpacing: "-0.5px"
+    }}>
+      {activeCount}
+    </div>
+  </div>
+</div>
         </div>
       </div>
 
