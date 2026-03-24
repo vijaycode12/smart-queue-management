@@ -14,7 +14,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const [newQueue, setNewQueue]           = useState({ queueName: "", status: "ACTIVE" });
   const [toast, setToast]                 = useState(null);
   const [loading, setLoading]             = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  // const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
   const [currentTime, setCurrentTime]     = useState(new Date());
 
@@ -537,10 +537,10 @@ export default function AdminDashboard({ user, onLogout }) {
                             📢 Call Next
                           </button>
                         )}
-                        <button onClick={() => setDeleteConfirm({ id: q.id, name: q.queueName })}
+                        {/* <button onClick={() => setDeleteConfirm({ id: q.id, name: q.queueName })}
                           style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "#fff1f2", color: "#be123c" }}>
                           🗑 Delete
-                        </button>
+                        </button> */}
                       </span>
                     </div>
                   );
@@ -609,7 +609,7 @@ export default function AdminDashboard({ user, onLogout }) {
       </div>
 
       {/* ══ DELETE MODAL ══ */}
-      {deleteConfirm && (
+      {/* {deleteConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "#fff", borderRadius: 24, padding: "40px", width: 440, boxShadow: "0 24px 64px rgba(0,0,0,0.25)", fontFamily: "'DM Sans', sans-serif" }}>
             <div style={{ fontSize: 48, textAlign: "center", marginBottom: 20 }}>🗑</div>
@@ -628,7 +628,7 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ══ TOAST ══ */}
       {toast && (
