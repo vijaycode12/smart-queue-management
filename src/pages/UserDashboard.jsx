@@ -1,19 +1,67 @@
 import { useState, useEffect } from "react";
-import { getAllQueues, generateToken, getQueuePosition, getWaitTime } from "../services/api";
+import {
+  getAllQueues,
+  generateToken,
+  getQueuePosition,
+  getWaitTime,
+  getTokensByUser,    // ← fetch user's tokens from backend on login
+} from "../services/api";
 
 export default function UserDashboard({ user, onLogout }) {
-  const [queues, setQueues]       = useState([]);
-  const [myTokens, setMyTokens]   = useState([]);
-  const [activeTab, setActiveTab] = useState("queues");
-  const [loading, setLoading]     = useState(false);
-  const [toast, setToast]         = useState(null);
-  const [waitInfo, setWaitInfo]   = useState({});
-  const [posInfo, setPosInfo]     = useState({});
+  const [queues, setQueues]           = useState([]);
+  const [myTokens, setMyTokens]       = useState([]);
+  const [activeTab, setActiveTab]     = useState("queues");
+  const [generatingId, setGeneratingId] = useState(null); // track WHICH queue is generating
+  const [toast, setToast]             = useState(null);
+  const [waitInfo, setWaitInfo]       = useState({});
+  const [posInfo, setPosInfo]         = useState({});
+  const [loadingTokens, setLoadingTokens] = useState(true);
 
-  useEffect(() => { fetchQueues(); }, []);
+  useEffect(() => {
+    fetchQueues();
+    fetchMyTokens(); // ← load user's existing tokens from backend on mount
+  }, []);
 
+  // ── Fetch all queues ──
   const fetchQueues = async () => {
-    try { const r = await getAllQueues(); setQueues(r.data || []); } catch {}
+    try {
+      const r = await getAllQueues();
+      setQueues(r.data || []);
+    } catch {
+      showToast("Failed to load queues", "error");
+    }
+  };
+
+  // ── Fetch this user's tokens from backend ──
+  // Calls GET /token/user/{userId} — always fresh from DB on every login
+  const fetchMyTokens = async () => {
+    setLoadingTokens(true);
+    try {
+      const res = await getTokensByUser(user.id);
+      const tokens = res.data || [];
+      setMyTokens(tokens);
+      // Also cache locally as backup
+      localStorage.setItem(`sqms_tokens_${user.id}`, JSON.stringify(tokens));
+      // Refresh wait/position info for WAITING tokens
+      tokens.forEach(t => {
+        if (t.status === "WAITING") {
+          fetchWaitInfo(t.id);
+          fetchPosInfo(t.id);
+        }
+      });
+    } catch {
+      // Fallback to localStorage cache if backend call fails
+      try {
+        const cached = localStorage.getItem(`sqms_tokens_${user.id}`);
+        if (cached) setMyTokens(JSON.parse(cached));
+      } catch {}
+    }
+    setLoadingTokens(false);
+  };
+
+  // Persist tokens to localStorage keyed by userId
+  const persistTokens = (tokens) => {
+    localStorage.setItem(`sqms_tokens_${user.id}`, JSON.stringify(tokens));
   };
 
   const showToast = (msg, type = "success") => {
@@ -21,35 +69,45 @@ export default function UserDashboard({ user, onLogout }) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // ── Generate token — tracks per-queue loading ──
   const handleGenerateToken = async (queueId, queueName) => {
-    setLoading(true);
+    if (generatingId) return; // prevent double-click on any queue
+    setGeneratingId(queueId); // only THIS queue shows loading
     try {
       const res = await generateToken(queueId, user.id, user.role);
-      const t = res.data;
-      setMyTokens(prev => [t, ...prev]);
-      showToast(`Token #${t.tokenNumber} generated for ${queueName}!`);
+      const t   = res.data;
+      const updated = [t, ...myTokens];
+      setMyTokens(updated);
+      persistTokens(updated); // ← save to localStorage
+      showToast(`Token #${t.tokenNumber} generated for "${queueName}"!`);
       setActiveTab("mytokens");
       fetchWaitInfo(t.id);
       fetchPosInfo(t.id);
     } catch (e) {
       showToast(e.response?.data || "Failed to generate token", "error");
     }
-    setLoading(false);
+    setGeneratingId(null);
   };
 
   const fetchWaitInfo = async (id) => {
-    try { const r = await getWaitTime(id); setWaitInfo(p => ({ ...p, [id]: r.data })); } 
-    catch(e) {
-        showToast("Failed to fetch wait info",e);
-    }
+    try {
+      const r = await getWaitTime(id);
+      setWaitInfo(p => ({ ...p, [id]: r.data }));
+    } catch {}
   };
+
   const fetchPosInfo = async (id) => {
-    try { const r = await getQueuePosition(id, user.id); setPosInfo(p => ({ ...p, [id]: r.data })); } 
-    catch(e) {
-        showToast("Failed to fetch position info",e);
-    }
+    try {
+      const r = await getQueuePosition(id, user.id);
+      setPosInfo(p => ({ ...p, [id]: r.data }));
+    } catch {}
   };
-  const refreshToken = (id) => { fetchWaitInfo(id); fetchPosInfo(id); showToast("Refreshed!"); };
+
+  const refreshToken = (id) => {
+    fetchWaitInfo(id);
+    fetchPosInfo(id);
+    showToast("Status refreshed!");
+  };
 
   const sc = (status) => ({
     WAITING:   { bg: "#fffbeb", color: "#d97706", dot: "#f59e0b", border: "#fde68a" },
@@ -59,55 +117,32 @@ export default function UserDashboard({ user, onLogout }) {
   }[status] || { bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af", border: "#e5e7eb" });
 
   return (
-    <div style={{
-      display: "flex",
-      width: "100vw",
-      minHeight: "100vh",
-      fontFamily: "'DM Sans', sans-serif",
-      background: "#f1f5f9",
-    }}>
+    <div style={{ display: "flex", width: "100vw", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", background: "#f1f5f9" }}>
 
-      {/* ════ SIDEBAR ════ */}
+      {/* ══ SIDEBAR ══ */}
       <aside style={{
-        width: 260,
-        minHeight: "100vh",
+        width: 260, minHeight: "100vh", flexShrink: 0,
         background: "linear-gradient(180deg, #0f0c29 0%, #1e1b4b 60%, #302b63 100%)",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        overflowY: "auto",
+        display: "flex", flexDirection: "column",
+        position: "sticky", top: 0, height: "100vh", overflowY: "auto",
       }}>
-        {/* Logo */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "28px 24px 24px",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            background: "linear-gradient(135deg, #f7971e, #ffd200)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, fontWeight: 900, color: "#000",
-          }}>Q</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "28px 24px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: "linear-gradient(135deg, #f7971e, #ffd200)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#000" }}>Q</div>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.4px" }}>SmartQueue</span>
         </div>
 
-        {/* Nav */}
         <div style={{ padding: "24px 14px", flex: 1 }}>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", letterSpacing: 1.8, fontWeight: 700, margin: "0 0 12px 8px" }}>NAVIGATION</p>
           {[
-            { id: "queues",   icon: "🏢", label: "Available Queues", count: queues.length },
+            { id: "queues",   icon: "🏢", label: "Available Queues", count: queues.length   },
             { id: "mytokens", icon: "🎫", label: "My Tokens",        count: myTokens.length },
           ].map(item => (
             <button key={item.id}
               onClick={() => setActiveTab(item.id)}
               style={{
                 display: "flex", alignItems: "center", gap: 12, width: "100%",
-                padding: "12px 14px", borderRadius: 12, border: "none",
-                cursor: "pointer", textAlign: "left", marginBottom: 4,
+                padding: "12px 14px", borderRadius: 12, border: "none", cursor: "pointer",
+                textAlign: "left", marginBottom: 4,
                 background: activeTab === item.id ? "rgba(255,255,255,0.12)" : "transparent",
                 color: activeTab === item.id ? "#fff" : "rgba(255,255,255,0.5)",
                 fontSize: 14, fontWeight: activeTab === item.id ? 700 : 500,
@@ -125,38 +160,27 @@ export default function UserDashboard({ user, onLogout }) {
           ))}
         </div>
 
-        {/* User + Logout */}
         <div style={{ padding: "16px 14px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px", marginBottom: 8 }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-              background: "linear-gradient(135deg, #f7971e, #ffd200)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, fontWeight: 800, color: "#000",
-            }}>{user?.name?.[0]?.toUpperCase()}</div>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #f7971e, #ffd200)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#000" }}>
+              {user?.name?.[0]?.toUpperCase()}
+            </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{user?.name}</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{user?.email}</div>
             </div>
           </div>
-          <button onClick={onLogout} style={{
-            width: "100%", padding: "10px", borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)", background: "transparent",
-            color: "rgba(255,255,255,0.45)", cursor: "pointer", fontSize: 13, fontWeight: 500,
-          }}>↩ Sign Out</button>
+          <button onClick={onLogout} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.45)", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
+            ↩ Sign Out
+          </button>
         </div>
       </aside>
 
-      {/* ════ MAIN CONTENT ════ */}
+      {/* ══ MAIN ══ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
         {/* Topbar */}
-        <header style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "24px 40px", background: "#fff",
-          borderBottom: "1px solid #e5e7eb",
-          position: "sticky", top: 0, zIndex: 10,
-        }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 40px", background: "#fff", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: "#111", margin: "0 0 4px", letterSpacing: "-0.5px" }}>
               {activeTab === "queues" ? "Available Queues" : "My Tokens"}
@@ -164,96 +188,123 @@ export default function UserDashboard({ user, onLogout }) {
             <p style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>
               {activeTab === "queues"
                 ? "Select a queue and get your token instantly"
-                : "Track your position and estimated wait time"}
+                : "Track your token position and estimated wait time"}
             </p>
           </div>
-          <div style={{
-            padding: "10px 18px", borderRadius: 50, background: "#f3f4f6",
-            fontSize: 14, color: "#374151",
-          }}>
+          <div style={{ padding: "10px 18px", borderRadius: 50, background: "#f3f4f6", fontSize: 14, color: "#374151" }}>
             👋 Hello, <strong>{user?.name}</strong>
           </div>
         </header>
 
-        {/* Page Content */}
         <div style={{ flex: 1, padding: "36px 40px", overflowY: "auto" }}>
 
-          {/* ── QUEUES TAB ── */}
+          {/* ══ QUEUES TAB ══ */}
           {activeTab === "queues" && (
             queues.length === 0 ? (
               <EmptyState icon="🏢" title="No Queues Available" sub="Ask admin to create queues" action="Retry" onAction={fetchQueues} />
             ) : (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 20,
-              }}>
-                {queues.map(q => (
-                  <div key={q.id} style={{
-                    background: "#fff", borderRadius: 20,
-                    border: "1px solid #e5e7eb",
-                    boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-                    display: "flex", flexDirection: "column",
-                    overflow: "hidden",
-                  }}>
-                    <div style={{ padding: "24px 24px 18px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <span style={{ fontSize: 40 }}>🏢</span>
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
-                          background: q.status === "INACTIVE" ? "#fef2f2" : "#f0fdf4",
-                          color: q.status === "INACTIVE" ? "#dc2626" : "#16a34a",
-                        }}>
-                          {q.status || "ACTIVE"}
-                        </span>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+                {queues.map(q => {
+                  const isThisGenerating = generatingId === q.id;
+                  const isAnyGenerating  = generatingId !== null;
+                  const isInactive = q.status === "INACTIVE";
+                  const isPaused   = q.status === "PAUSED";
+                  const isDisabled = isAnyGenerating || isInactive || isPaused;
+
+                  return (
+                    <div key={q.id} style={{
+                      background: "#fff", borderRadius: 20,
+                      border: `1px solid ${isInactive ? "#fecaca" : isPaused ? "#fde68a" : "#e5e7eb"}`,
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+                      display: "flex", flexDirection: "column",
+                      overflow: "hidden",
+                      opacity: isInactive ? 0.7 : 1,
+                    }}>
+                      <div style={{ padding: "24px 24px 18px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <span style={{ fontSize: 40 }}>🏢</span>
+                          {/* Status badge */}
+                          <span style={{
+                            fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+                            background: isInactive ? "#fef2f2" : isPaused ? "#fffbeb" : "#f0fdf4",
+                            color:      isInactive ? "#dc2626" : isPaused ? "#d97706" : "#16a34a",
+                          }}>
+                            {q.status || "ACTIVE"}
+                          </span>
+                        </div>
+                        <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111", margin: "0 0 4px" }}>{q.queueName}</h3>
+                        <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Queue #{q.displayId ?? q.id}</p>
+
+                        {isPaused && (
+                          <div style={{ marginTop: 10, padding: "8px 12px", background: "#fffbeb", borderRadius: 8, fontSize: 12, color: "#d97706", fontWeight: 600 }}>
+                            ⏸ This queue is temporarily paused
+                          </div>
+                        )}
+                        {isInactive && (
+                          <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef2f2", borderRadius: 8, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
+                            🚫 This queue is currently inactive
+                          </div>
+                        )}
                       </div>
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111", margin: "0 0 6px" }}>{q.queueName}</h3>
-                      <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Queue ID · #{q.id}</p>
+
+                      <div style={{ padding: "0 16px 16px" }}>
+                        <button
+                          onClick={() => !isDisabled && handleGenerateToken(q.id, q.queueName)}
+                          disabled={isDisabled}
+                          style={{
+                            width: "100%", padding: "13px", borderRadius: 12, border: "none",
+                            // Only the CLICKED queue gets the loading style
+                            background: isThisGenerating
+                              ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                              : isDisabled
+                                ? "#e5e7eb"
+                                : "linear-gradient(135deg, #302b63, #0f0c29)",
+                            color: isDisabled && !isThisGenerating ? "#9ca3af" : "#fff",
+                            fontSize: 14, fontWeight: 700, cursor: isDisabled ? "not-allowed" : "pointer",
+                            transition: "all 0.2s",
+                          }}>
+                          {isThisGenerating
+                            ? "⏳ Generating…"
+                            : isInactive
+                              ? "🚫 Queue Inactive"
+                              : isPaused
+                                ? "⏸ Queue Paused"
+                                : "🎫 Get My Token"}
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ padding: "0 16px 16px" }}>
-                      <button
-                        onClick={() => handleGenerateToken(q.id, q.queueName)}
-                        disabled={loading}
-                        style={{
-                          width: "100%", padding: "13px", borderRadius: 12, border: "none",
-                          background: "linear-gradient(135deg, #302b63, #0f0c29)",
-                          color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
-                          opacity: loading ? 0.7 : 1,
-                        }}>
-                        🎫 {loading ? "Generating…" : "Get My Token"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           )}
 
-          {/* ── MY TOKENS TAB ── */}
+          {/* ══ MY TOKENS TAB ══ */}
           {activeTab === "mytokens" && (
-            myTokens.length === 0 ? (
-              <EmptyState icon="🎫" title="No Tokens Yet" sub="Go to Available Queues to get your first token" action="Browse Queues" onAction={() => setActiveTab("queues")} />
+            loadingTokens ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px", color: "#9ca3af", fontSize: 15 }}>
+                Loading your tokens…
+              </div>
+            ) : myTokens.length === 0 ? (
+              <EmptyState
+                icon="🎫"
+                title="No Tokens Yet"
+                sub="Go to Available Queues to get your first token"
+                action="Browse Queues"
+                onAction={() => setActiveTab("queues")}
+              />
             ) : (
-              <div style={{
-                background: "#fff", borderRadius: 20,
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-                overflow: "hidden",
-              }}>
+              <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #e5e7eb", boxShadow: "0 2px 12px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+
                 {/* Table Head */}
-                <div style={{
-                  display: "flex", padding: "14px 28px",
-                  background: "#f8fafc", borderBottom: "2px solid #e5e7eb",
-                  fontSize: 11, fontWeight: 800, color: "#9ca3af",
-                  letterSpacing: 1, textTransform: "uppercase",
-                }}>
+                <div style={{ display: "flex", alignItems: "center", padding: "14px 28px", background: "#f8fafc", borderBottom: "2px solid #e5e7eb", fontSize: 11, fontWeight: 800, color: "#9ca3af", letterSpacing: 1, textTransform: "uppercase" }}>
                   <span style={{ width: 110 }}>Token #</span>
                   <span style={{ flex: 1 }}>Queue</span>
                   <span style={{ width: 140 }}>Status</span>
                   <span style={{ width: 100 }}>Position</span>
-                  <span style={{ width: 180 }}>Wait Time</span>
-                  <span style={{ width: 170 }}>Issued At</span>
-                  <span style={{ width: 100 }}>Action</span>
+                  <span style={{ width: 200 }}>Wait Time</span>
+                  <span style={{ width: 180 }}>Issued At</span>
+                  <span style={{ width: 110 }}>Action</span>
                 </div>
 
                 {myTokens.map((t, i) => {
@@ -265,11 +316,7 @@ export default function UserDashboard({ user, onLogout }) {
                       background: i % 2 === 0 ? "#fff" : "#fafafa",
                     }}>
                       <span style={{ width: 110 }}>
-                        <span style={{
-                          background: "#1e1b4b", color: "#c4b5fd",
-                          padding: "5px 12px", borderRadius: 8,
-                          fontSize: 13, fontWeight: 900,
-                        }}>
+                        <span style={{ background: "#1e1b4b", color: "#c4b5fd", padding: "5px 12px", borderRadius: 8, fontSize: 13, fontWeight: 900 }}>
                           #{String(t.tokenNumber).padStart(3, "0")}
                         </span>
                       </span>
@@ -277,36 +324,31 @@ export default function UserDashboard({ user, onLogout }) {
                         {t.queue?.queueName || "—"}
                       </span>
                       <span style={{ width: 140 }}>
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", gap: 6,
-                          padding: "5px 12px", borderRadius: 20,
-                          background: c.bg, color: c.color,
-                          fontSize: 12, fontWeight: 700,
-                        }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, background: c.bg, color: c.color, fontSize: 12, fontWeight: 700 }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot }} />
                           {t.status}
                         </span>
                       </span>
                       <span style={{ width: 100, fontSize: 14, color: "#6b7280" }}>
-                        {t.status === "WAITING" ? (posInfo[t.id] || "—") : "—"}
+                        {t.status === "WAITING" ? (posInfo[t.id] ?? "—") : "—"}
                       </span>
-                      <span style={{ width: 180, fontSize: 14, color: "#6b7280" }}>
+                      <span style={{ width: 200, fontSize: 14, color: "#6b7280" }}>
                         {t.status === "WAITING"
                           ? (waitInfo[t.id] || "Click refresh")
                           : t.status === "SERVING"
-                            ? <span style={{ color: "#16a34a", fontWeight: 700 }}>🔔 Your turn!</span>
+                            ? <span style={{ color: "#16a34a", fontWeight: 700 }}>🔔 Your turn now!</span>
                             : "—"}
                       </span>
-                      <span style={{ width: 170, fontSize: 12, color: "#9ca3af" }}>
-                        {t.createdAt ? new Date(t.createdAt).toLocaleString() : "—"}
+                      <span style={{ width: 180, fontSize: 12, color: "#9ca3af" }}>
+                        {t.createdAt
+                          ? formatDateTime(t.createdAt)
+                          : "—"}
                       </span>
-                      <span style={{ width: 100 }}>
+                      <span style={{ width: 110 }}>
                         {t.status === "WAITING" && (
-                          <button onClick={() => refreshToken(t.id)} style={{
-                            padding: "7px 14px", borderRadius: 8,
-                            border: "1.5px solid #e5e7eb", background: "#fff",
-                            fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#6b7280",
-                          }}>↻ Refresh</button>
+                          <button onClick={() => refreshToken(t.id)} style={{ padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#6b7280" }}>
+                            ↻ Refresh
+                          </button>
                         )}
                       </span>
                     </div>
@@ -322,9 +364,9 @@ export default function UserDashboard({ user, onLogout }) {
       {toast && (
         <div style={{
           position: "fixed", bottom: 32, right: 32,
-          padding: "14px 24px", borderRadius: 14,
-          color: "#fff", fontSize: 14, fontWeight: 600,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.2)", zIndex: 9999,
+          padding: "14px 24px", borderRadius: 14, color: "#fff",
+          fontSize: 14, fontWeight: 600, zIndex: 9999,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
           background: toast.type === "error" ? "#ef4444" : toast.type === "info" ? "#3b82f6" : "#10b981",
         }}>
           {toast.msg}
@@ -340,11 +382,29 @@ function EmptyState({ icon, title, sub, action, onAction }) {
       <div style={{ fontSize: 64, marginBottom: 20 }}>{icon}</div>
       <h3 style={{ fontSize: 22, fontWeight: 800, color: "#111", margin: "0 0 8px" }}>{title}</h3>
       <p style={{ fontSize: 15, color: "#9ca3af", margin: "0 0 28px" }}>{sub}</p>
-      <button onClick={onAction} style={{
-        padding: "12px 28px", borderRadius: 12, border: "none",
-        background: "linear-gradient(135deg, #302b63, #0f0c29)",
-        color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
-      }}>{action}</button>
+      <button onClick={onAction} style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #302b63, #0f0c29)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+        {action}
+      </button>
     </div>
   );
+}
+
+// Format LocalDateTime correctly
+function formatDateTime(raw) {
+  if (!raw) return "—";
+  try {
+    let dt;
+    if (Array.isArray(raw)) {
+      const [y, mo, d, h = 0, m = 0, s = 0] = raw;
+      dt = new Date(y, mo - 1, d, h, m, s);
+    } else {
+      dt = new Date(raw);
+    }
+    return dt.toLocaleString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: true,
+    });
+  } catch {
+    return String(raw).slice(0, 16).replace("T", " ");
+  }
 }

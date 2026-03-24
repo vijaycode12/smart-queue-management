@@ -22,6 +22,10 @@ export const getAllTokens = (role) =>
 
 export const getWaitingTokens = () => api.get('/token/waiting');
 
+export const getTokensByUser   = (userId)  =>
+  api.get(`/token/user/${userId}`, { headers: { userId: String(userId) } });
+
+
 export const getTokensByQueue = (queueId) =>
   api.get(`/token/queue/${queueId}`);
 
@@ -42,6 +46,10 @@ export const markNoShow = (id, role) =>
 
 export const updateQueueStatus = (id, status, role) =>
   api.put(`/queue/status/${id}?status=${status}`, {}, { headers: { role }});
+
+export const triggerCleanup    = (role)                  =>
+  api.post('/token/cleanup', {}, { headers: { role } });
+
 
 // export const deleteQueue = (id, role) =>
 //   api.delete(`/queue/delete/${id}`, { headers: { role } });
