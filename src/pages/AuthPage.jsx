@@ -32,23 +32,14 @@ export default function AuthPage({ onLogin }) {
   const errorMsg  = isSuccess ? error.replace("success:", "") : error;
 
   return (
-    <div style={{
-      display: "flex",
-      width: "100vw",
-      minHeight: "100vh",
-      fontFamily: "'DM Sans', sans-serif",
-    }}>
+    <div style={{ display: "flex", width: "100vw", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ════ LEFT PANEL ════ */}
       <div style={{
-        width: "42%",
-        minHeight: "100vh",
+        width: "42%", minHeight: "100vh",
         background: "linear-gradient(160deg, #0d0b22 0%, #1a1640 50%, #2d2870 100%)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        padding: "60px 64px",
-        flexShrink: 0,
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        padding: "60px 64px", flexShrink: 0,
       }}>
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 60 }}>
@@ -66,10 +57,7 @@ export default function AuthPage({ onLogin }) {
         </div>
 
         {/* Hero */}
-        <h2 style={{
-          fontSize: 46, fontWeight: 900, color: "#fff",
-          lineHeight: 1.1, letterSpacing: "-2px", marginBottom: 20,
-        }}>
+        <h2 style={{ fontSize: 46, fontWeight: 900, color: "#fff", lineHeight: 1.1, letterSpacing: "-2px", marginBottom: 20 }}>
           Manage queues<br />with precision.
         </h2>
         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", lineHeight: 1.75, marginBottom: 52 }}>
@@ -91,29 +79,57 @@ export default function AuthPage({ onLogin }) {
           ))}
         </div>
 
-        {/* Live Card */}
+        {/* ── Live Card — shows open offices, not people waiting ── */}
         <div style={{
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 20, padding: "24px 28px",
         }}>
+          {/* Live dot + label */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 0 3px rgba(16,185,129,0.25)" }} />
             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 2.5, fontWeight: 700 }}>NOW SERVING</span>
           </div>
-          <div style={{ fontSize: 44, fontWeight: 900, color: "#ffd200", letterSpacing: "-2px", marginBottom: 6 }}>A042</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>Counter A · 3 people waiting</div>
+
+          {/* Token number */}
+          <div style={{ fontSize: 44, fontWeight: 900, color: "#ffd200", letterSpacing: "-2px", marginBottom: 14 }}>A042</div>
+
+          {/* ── Open Offices row ── */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🏢</span>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>OFFICES OPEN</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>3</div>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🖥️</span>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>COUNTERS</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>A · B · C</div>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>STATUS</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981" }}>All Active</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ════ RIGHT PANEL ════ */}
       <div style={{
-        flex: 1,
-        minHeight: "100vh",
-        background: "#f8f9fb",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        flex: 1, minHeight: "100vh", background: "#f8f9fb",
+        display: "flex", alignItems: "center", justifyContent: "center",
         padding: "60px 80px",
       }}>
         <div style={{ width: "100%", maxWidth: 460 }}>
@@ -176,7 +192,7 @@ export default function AuthPage({ onLogin }) {
             )}
           </div>
 
-          {/* Error / Success */}
+          {/* Alert */}
           {error && (
             <div style={{
               padding: "13px 16px", borderRadius: 12, marginBottom: 20,
@@ -202,8 +218,7 @@ export default function AuthPage({ onLogin }) {
 
           <p style={{ textAlign: "center", fontSize: 14, color: "#9ca3af" }}>
             {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <span
-              onClick={() => { setIsLogin(!isLogin); setError(""); }}
+            <span onClick={() => { setIsLogin(!isLogin); setError(""); }}
               style={{ color: "#302b63", fontWeight: 800, cursor: "pointer" }}>
               {isLogin ? "Register here" : "Sign in"}
             </span>
@@ -218,5 +233,5 @@ const lbl = { display: "block", fontSize: 14, fontWeight: 700, color: "#374151",
 const inp = {
   width: "100%", padding: "14px 16px", borderRadius: 12,
   border: "1.5px solid #e5e7eb", fontSize: 15, color: "#111",
-  background: "#fff", boxSizing: "border-box",
+  background: "#fff", boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif",
 };
