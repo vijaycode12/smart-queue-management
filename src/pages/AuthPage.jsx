@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { loginUser, registerUser } from "../services/api";
+import { useState, useEffect } from "react";
+import { loginUser, registerUser, getAllQueues } from "../services/api";
 
 export default function AuthPage({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -7,7 +7,26 @@ export default function AuthPage({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ Added for active offices count
+  const [activeCount, setActiveCount] = useState(0);
+
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  // ✅ Fetch active queues count
+  useEffect(() => {
+    fetchActiveQueues();
+  }, []);
+
+  const fetchActiveQueues = async () => {
+    try {
+      const res = await getAllQueues();
+      const activeQueues = (res.data || []).filter((q) => q.status === "ACTIVE");
+      setActiveCount(activeQueues.length);
+    } catch (err) {
+      console.error("Failed to fetch queues:", err);
+      setActiveCount(0);
+    }
+  };
 
   const submit = async () => {
     setError("");
@@ -29,7 +48,7 @@ export default function AuthPage({ onLogin }) {
   };
 
   const isSuccess = error.startsWith("success:");
-  const errorMsg  = isSuccess ? error.replace("success:", "") : error;
+  const errorMsg = isSuccess ? error.replace("success:", "") : error;
 
   return (
     <div style={{ display: "flex", width: "100vw", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
@@ -103,7 +122,9 @@ export default function AuthPage({ onLogin }) {
               <span style={{ fontSize: 16 }}>🏢</span>
               <div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>OFFICES OPEN</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>3</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>
+                  {activeCount}
+                </div>
               </div>
             </div>
             <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
@@ -119,7 +140,9 @@ export default function AuthPage({ onLogin }) {
               <span style={{ fontSize: 16 }}>✅</span>
               <div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>STATUS</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981" }}>All Active</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981" }}>
+                  {activeCount > 0 ? "Active Offices" : "No Active Office"}
+                </div>
               </div>
             </div>
           </div>
